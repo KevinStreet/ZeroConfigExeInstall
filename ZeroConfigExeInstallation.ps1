@@ -31,8 +31,8 @@
 .EXAMPLE
     ZeroConfigExeInstallation.ps1 -deploymentType Uninstall
 .NOTES
-    Script version: 0.3.0
-    Release date: 02/06/2019.
+    Script version: 0.3.1
+    Release date: 03/06/2019.
     Author: Kevin Street.
 .LINK
 	https://kevinstreet.co.uk
@@ -53,8 +53,8 @@ param (
 
 [string]$appDeployToolkitExtName = 'ZeroConfigExe'
 [string]$appDeployExtScriptFriendlyName = 'Zero-Config Executable Installation'
-[version]$appDeployExtScriptVersion = [version]'0.3.0'
-[string]$appDeployExtScriptDate = '02/06/2019'
+[version]$appDeployExtScriptVersion = [version]'0.3.1'
+[string]$appDeployExtScriptDate = '03/06/2019'
 
 ## Check for Exe installer and modify the installer path accordingly.
 ## If multiple .exe files are found attempt to find setup.exe or install.exe and use those. If neither exist the user must specify the installer .exe in $installerExecutable in Deploy-Application.ps1.
@@ -282,7 +282,7 @@ Function Find-InstallerTechnology {
     return $installerTechnology
 }
 
-Function Find-UninstallStringInRegsitry {
+Function Find-UninstallStringInRegistry {
 <#
 .SYNOPSIS
 	Detect the uninstall command for an application in the Windows registry.
@@ -291,7 +291,7 @@ Function Find-UninstallStringInRegsitry {
     On 32bit systems only this key is searched, on 64bit systems both this key and the WOW6432Node key are searched.
     The results are logged so if no uninstall string is found the user can modify the uninstall behaviour accordingly.
 .EXAMPLE
-	Find-UninstallStringInRegsitry
+	Find-UninstallStringInRegistry
 .NOTES
 	This is an internal script function and should typically not be called directly.
 #>
@@ -369,19 +369,47 @@ Function Find-UninstallStringInRegsitry {
     ## Return the results in a hashtable so that they can be queried by the requesting uninstall function
     if (-not ([string]::IsNullOrEmpty($quietUninstallString))) {
         $uninstallExe, $arguments = $quietUninstallString -split ' +(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)'
-        $returnValues.uninstallExe = $uninstallExe.Trim()
-        $returnValues.arguments = $arguments.Trim()
+        
+        if (-not ([string]::IsNullOrEmpty($uninstallExe))) {
+            $returnValues.uninstallExe = $uninstallExe.Trim()
+        }
+
+        if (-not ([string]::IsNullOrEmpty($arguments))) {
+            $returnValues.arguments = $arguments.Trim()
+        }
     }   
     
     elseif (-not ([string]::IsNullOrEmpty($uninstallString))) {
         $uninstallExe, $arguments = $uninstallString -split ' +(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)'
-        $returnValues.uninstallExe = $uninstallExe.Trim()
-        $returnValues.arguments = $arguments.Trim()
+        
+        if (-not ([string]::IsNullOrEmpty($uninstallExe))) {
+            $returnValues.uninstallExe = $uninstallExe.Trim()
+        }
+
+        if (-not ([string]::IsNullOrEmpty($arguments))) {
+            $returnValues.arguments = $arguments.Trim()
+        }
+
+        else {
+            $returnValues.arguments = ""
+        }
     }
     
     else {
         $returnValues.uninstallExe = ""
         $returnValues.arguments = ""    
+    }
+
+    ## If arguments where not encased in quotes the "$returnValues.arguments" may now contain multiple values. This needs to be just one value.
+    if ((($returnValues.arguments).Count) -gt 1) {
+        $returnValues.arguments = [System.String]::Join(" ", $returnValues.arguments)
+    }
+
+    ## If the arguments variable looks like a path, make sure there are quotes around it to protect against paths with spaces in.
+    if ($returnValues.arguments -like "*$Env:SystemDrive\*") {
+        if ((-not ($returnValues.arguments.StartsWith('"'))) -and (-not ($returnValues.arguments.EndsWith('"')))) {
+            $returnValues.arguments = '"' + $returnValues.arguments + '"'
+        }
     }
     
     return $returnValues
@@ -416,11 +444,21 @@ Function Install-UsingNSISInstaller {
     }
 
     if ($deploymentType -eq "Uninstall") {
-        $uninstallValues = Find-UninstallStringInRegsitry
+        $uninstallValues = Find-UninstallStringInRegistry
         
         if ((-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) -and (-not ([string]::IsNullOrEmpty($uninstallValues.arguments)))) {
             $defaultExeFile = $uninstallValues.uninstallExe
             $arguments = $uninstallValues.arguments
+
+            ## Add the all users switch /AllUsers if it is not included in the arguments obtained from the registry.
+            if (-not (($arguments) -like "*/AllUsers*")) {
+                $arguments = $arguments + " /AllUsers"
+            }
+
+            ## Add the silent switch /S if it is not included in the arguments obtained from the registry.
+            if (-not (($arguments) -like "*/S*")) {
+                $arguments = $arguments + " /S"
+            }
         }
         
         elseif (-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) {
@@ -476,7 +514,7 @@ Function Install-UsingInnoSetupInstaller {
 
     if ($deploymentType -eq "Uninstall") {
         ## Inno Setup sometimes places an uninstaller in the install directory of the app, attempt to find this in the registry and then uninstall.
-        $uninstallValues = Find-UninstallStringInRegsitry
+        $uninstallValues = Find-UninstallStringInRegistry
         
         if ((-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) -and (-not ([string]::IsNullOrEmpty($uninstallValues.arguments)))) {
             $defaultExeFile = $uninstallValues.uninstallExe
@@ -620,7 +658,7 @@ Function Install-UsingWiseInstaller {
     }
 
     if ($deploymentType -eq "Uninstall") {
-        $uninstallValues = Find-UninstallStringInRegsitry
+        $uninstallValues = Find-UninstallStringInRegistry
 
         if ((-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) -and (-not ([string]::IsNullOrEmpty($uninstallValues.arguments)))) {
             $defaultExeFile = $uninstallValues.uninstallExe
@@ -710,7 +748,7 @@ Function Install-UsingInstall4j {
     }
 
     if ($deploymentType -eq "Uninstall") {
-        $uninstallValues = Find-UninstallStringInRegsitry
+        $uninstallValues = Find-UninstallStringInRegistry
 
         if ((-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) -and (-not ([string]::IsNullOrEmpty($uninstallValues.arguments)))) {
             $defaultExeFile = $uninstallValues.uninstallExe
@@ -765,7 +803,7 @@ Function Install-UsingSetupFactory {
     if ($deploymentType -eq "Uninstall") {
         ## Setup Factory installers always have "Setup Factory Runtime" as the product name rather than the actual product details. Therefore user defined app name needs to be used.
         $appName = $userDefinedAppName
-        $uninstallValues = Find-UninstallStringInRegsitry
+        $uninstallValues = Find-UninstallStringInRegistry
 
         if ((-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) -and (-not ([string]::IsNullOrEmpty($uninstallValues.arguments)))) {
             $defaultExeFile = $uninstallValues.uninstallExe
@@ -840,7 +878,7 @@ Function Install-UsingOffice365ClickToRunInstaller {
     if ($deploymentType -eq "Uninstall") {
         $realAppName = $appName
         $appName = "O365ProPlusRetail"
-        $uninstallValues = Find-UninstallStringInRegsitry
+        $uninstallValues = Find-UninstallStringInRegistry
         
         if ((-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) -and (-not ([string]::IsNullOrEmpty($uninstallValues.arguments)))) {
             $defaultExeFile = $uninstallValues.uninstallExe
