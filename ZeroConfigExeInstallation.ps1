@@ -31,8 +31,8 @@
 .EXAMPLE
     ZeroConfigExeInstallation.ps1 -deploymentType Uninstall
 .NOTES
-    Script version: 0.3.1
-    Release date: 03/06/2019.
+    Script version: 0.3.2
+    Release date: 04/06/2019.
     Author: Kevin Street.
 .LINK
 	https://kevinstreet.co.uk
@@ -53,8 +53,8 @@ param (
 
 [string]$appDeployToolkitExtName = 'ZeroConfigExe'
 [string]$appDeployExtScriptFriendlyName = 'Zero-Config Executable Installation'
-[version]$appDeployExtScriptVersion = [version]'0.3.1'
-[string]$appDeployExtScriptDate = '03/06/2019'
+[version]$appDeployExtScriptVersion = [version]'0.3.2'
+[string]$appDeployExtScriptDate = '04/06/2019'
 
 ## Check for Exe installer and modify the installer path accordingly.
 ## If multiple .exe files are found attempt to find setup.exe or install.exe and use those. If neither exist the user must specify the installer .exe in $installerExecutable in Deploy-Application.ps1.
@@ -302,6 +302,8 @@ Function Find-UninstallStringInRegistry {
     [string]$uninstallString = ""
     [string]$quietUninstallString = ""
     [hashtable]$returnValues = @{}
+    $returnValues.uninstallExe = ""
+    $returnValues.arguments = ""
     
     ## Attempt to find an uninstall string for the app in the Windows uninstall registry key
     ## Start by checking HKEY_LOCAL_MACHINE, both 32-bit and 64-bit on 64-bit systems (only 32-bit on 32-bit systems)
@@ -314,7 +316,7 @@ Function Find-UninstallStringInRegistry {
         $registryKey = ($key.Name) -replace "HKEY_LOCAL_MACHINE", "HKLM:"
         $registryProperties = Get-ItemProperty -Path $registryKey
         
-        if (($registryKey -like "*$appName*") -or (($registryProperties.DisplayName) -like "*$appName*")) {
+        if (($registryKey -like "*$appName*") -or ($registryKey -like "*$userDefinedAppName*") -or (($registryProperties.DisplayName) -like "*$appName*")) {
             if (-not ([string]::IsNullOrEmpty($registryProperties.UninstallString))) {
                 [string]$uninstallString = $registryProperties.UninstallString
             }
@@ -331,7 +333,7 @@ Function Find-UninstallStringInRegistry {
             $registryKey = ($key.Name) -replace "HKEY_LOCAL_MACHINE", "HKLM:"
             $registryProperties = Get-ItemProperty -Path $registryKey
          
-            if (($registryKey -like "*$appName*") -or (($registryProperties.DisplayName) -like "*$appName*")) {
+            if (($registryKey -like "*$appName*") -or ($registryKey -like "*$userDefinedAppName*") -or (($registryProperties.DisplayName) -like "*$appName*")) {
                 if (-not ([string]::IsNullOrEmpty($registryProperties.UninstallString))) {
                     [string]$uninstallString = $registryProperties.UninstallString
                 }
@@ -366,41 +368,48 @@ Function Find-UninstallStringInRegistry {
         }
     }
     
-    ## Return the results in a hashtable so that they can be queried by the requesting uninstall function
+    ## Return the results in a hashtable so that they can be queried by the requesting uninstall function.
     if (-not ([string]::IsNullOrEmpty($quietUninstallString))) {
-        $uninstallExe, $arguments = $quietUninstallString -split ' +(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)'
+        ## If $quietUninstallString does not start with a quote it probably is not encased in them so it should not be split as 
+        ## it is unlikely to have arguments.
+        if ($quietUninstallString.StartsWith('"')) {
+            $uninstallExe, $arguments = $quietUninstallString -split ' +(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)'
         
-        if (-not ([string]::IsNullOrEmpty($uninstallExe))) {
-            $returnValues.uninstallExe = $uninstallExe.Trim()
+            if (-not ([string]::IsNullOrEmpty($uninstallExe))) {
+                $returnValues.uninstallExe = $uninstallExe.Trim()
+            }
+
+            if (-not ([string]::IsNullOrEmpty($arguments))) {
+                $returnValues.arguments = $arguments.Trim()
+            }
         }
 
-        if (-not ([string]::IsNullOrEmpty($arguments))) {
-            $returnValues.arguments = $arguments.Trim()
+        else {
+            $returnValues.uninstallExe = $quietUninstallString.Trim()
         }
     }   
     
     elseif (-not ([string]::IsNullOrEmpty($uninstallString))) {
-        $uninstallExe, $arguments = $uninstallString -split ' +(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)'
+        ## If $uninstallString does not start with a quote it probably is not encased in them so it should not be split as 
+        ## it is unlikely to have arguments.
+        if ($uninstallString.StartsWith('"')) {
+            $uninstallExe, $arguments = $uninstallString -split ' +(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)'
         
-        if (-not ([string]::IsNullOrEmpty($uninstallExe))) {
-            $returnValues.uninstallExe = $uninstallExe.Trim()
-        }
+            if (-not ([string]::IsNullOrEmpty($uninstallExe))) {
+                $returnValues.uninstallExe = $uninstallExe.Trim()
+            }
 
-        if (-not ([string]::IsNullOrEmpty($arguments))) {
-            $returnValues.arguments = $arguments.Trim()
+            if (-not ([string]::IsNullOrEmpty($arguments))) {
+                $returnValues.arguments = $arguments.Trim()
+            }
         }
 
         else {
-            $returnValues.arguments = ""
+            $returnValues.uninstallExe = $uninstallString.Trim()
         }
     }
-    
-    else {
-        $returnValues.uninstallExe = ""
-        $returnValues.arguments = ""    
-    }
 
-    ## If arguments where not encased in quotes the "$returnValues.arguments" may now contain multiple values. This needs to be just one value.
+    ## If arguments were not encased in quotes the "$returnValues.arguments" may now contain multiple values. This needs to be just one value.
     if ((($returnValues.arguments).Count) -gt 1) {
         $returnValues.arguments = [System.String]::Join(" ", $returnValues.arguments)
     }
@@ -440,7 +449,7 @@ Function Install-UsingNSISInstaller {
     )
 
     if ($deploymentType -eq "Install") {
-        $arguments = "/AllUsers /S"
+        $arguments = "/AllUsers /S -silent --allusers=1"
     }
 
     if ($deploymentType -eq "Uninstall") {
@@ -450,20 +459,25 @@ Function Install-UsingNSISInstaller {
             $defaultExeFile = $uninstallValues.uninstallExe
             $arguments = $uninstallValues.arguments
 
+            ## Add the uninstall switch -uninstall if it is not included in the arguments obtained from the registry.
+            if (-not ($arguments -like "*/uninstall*") -or (-not ($arguments -like "*-uninstall*"))) {
+                $arguments = $arguments + " -uninstall"
+            }
+
             ## Add the all users switch /AllUsers if it is not included in the arguments obtained from the registry.
-            if (-not (($arguments) -like "*/AllUsers*")) {
-                $arguments = $arguments + " /AllUsers"
+            if (-not ($arguments -like "*/AllUsers*")) {
+                $arguments = $arguments + " /AllUsers --allusers=1"
             }
 
             ## Add the silent switch /S if it is not included in the arguments obtained from the registry.
-            if (-not (($arguments) -like "*/S*")) {
-                $arguments = $arguments + " /S"
+            if (-not ($arguments -like "*/S*")) {
+                $arguments = $arguments + " /S -silent"
             }
         }
         
         elseif (-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) {
             $defaultExeFile = $uninstallValues.uninstallExe
-            $arguments = "/AllUsers /S"    
+            $arguments = "-uninstall /AllUsers --allusers=1 /S -silent"    
         }
         
         else {
@@ -519,6 +533,21 @@ Function Install-UsingInnoSetupInstaller {
         if ((-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) -and (-not ([string]::IsNullOrEmpty($uninstallValues.arguments)))) {
             $defaultExeFile = $uninstallValues.uninstallExe
             $arguments = $uninstallValues.arguments
+
+            ## If the /silent switch is specified in the registry, replace with /verysilent as this hides the uninstall status screen as well.
+            if ($arguments -like "*/silent*") {
+                $arguments = $arguments -replace ("/silent", "/verysilent")
+            }
+
+            ## Add the silent switch /verysilent if it is not included in the arguments obtained from the registry.
+            if (-not ($arguments -like "*/verysilent*")) {
+                $arguments = $arguments + " /verysilent"
+            }
+
+            ## Add the log switch /LOG if it is not included in the arguments obtained from the registry.
+            if (-not ($arguments -like "*/LOG*")) {
+                $arguments = $arguments + ' /LOG=' + '"' + "$configToolkitLogDir\$appExeLogFileName" + '_Uninstall.log' + '"'
+            }
         }
         
         elseif (-not ([string]::IsNullOrEmpty($uninstallValues.uninstallExe))) {
