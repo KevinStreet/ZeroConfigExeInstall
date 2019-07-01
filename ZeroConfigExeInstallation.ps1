@@ -32,8 +32,8 @@
 .EXAMPLE
     ZeroConfigExeInstallation.ps1 -deploymentType Uninstall
 .NOTES
-    Script version: 0.3.3
-    Release date: 18/06/2019.
+    Script version: 0.3.4
+    Release date: 01/07/2019.
     Author: Kevin Street.
 .LINK
 	https://kevinstreet.co.uk
@@ -67,11 +67,11 @@ elseif ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
 if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
     [string]$appDeployToolkitExtName = 'ZeroConfigExe'
     [string]$appDeployExtScriptFriendlyName = 'Zero-Config Executable Installation'
-    [version]$appDeployExtScriptVersion = [version]'0.3.3'
-    [string]$appDeployExtScriptDate = '18/06/2019'
+    [version]$appDeployExtScriptVersion = [version]'0.3.4'
+    [string]$appDeployExtScriptDate = '01/07/2019'
 
     ## Check for Exe installer and modify the installer path accordingly.
-    ## If multiple .exe files are found attempt to find setup.exe or install.exe and use those. If neither exist the user must specify the installer .exe in $installerExecutable in Deploy-Application.ps1.
+    ## If multiple .exe files are found attempt to find setup.exe or install.exe and use those. If neither exist the user must specify the installer executable in the $installerExecutable variable in Deploy-Application.ps1.
     if ([string]::IsNullOrEmpty($installerExecutable)) {
         [array]$exesInPath = (Get-ChildItem -Path "$dirFiles\*.exe").Name
         if ($exesInPath.Count -gt 1) {
@@ -84,7 +84,7 @@ if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
             }
 
             else {
-                Write-Log -Message "Multiple .exe files found but not sure which to use as the install. The installer .exe must be specified in Deploy-Application.ps1." -Source $appDeployToolkitExtName
+                Write-Log -Message "Multiple .exe files found but not sure which to use as the installer. The installer .exe must be specified in the $installerExecutable variable in Deploy-Application.ps1." -Source $appDeployToolkitExtName
             }
         }
 
@@ -103,13 +103,21 @@ if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
         [string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -eq "$installerExecutable") } | Select-Object -ExpandProperty 'FullName'
     }
 
+    if (-not ([string]::IsNullOrEmpty($defaultExeFile))) {
+        Write-Log -Message "Installer executable found: $defaultExeFile." -Source $appDeployToolkitExtName
+    }
+
+    else {
+        Write-Log -Message "No installer executable was found." -Source $appDeployToolkitExtName
+    }
+
     ## Check for Msu installer and modify the installer path accordingly.
     ## If multiple .msu files are found iform the user they must specify which one they want in $installerExecutable in Deploy-Application.ps1.
     if ([string]::IsNullOrEmpty($defaultExeFile)) {
         if ([string]::IsNullOrEmpty($installerExecutable)) {
             [array]$msusInPath = (Get-ChildItem -Path "$dirFiles\*.msu").Name
             if ($msusInPath -gt 1) {
-                Write-Log -Message "Multiple .msu files found but not sure which one to use. Please reduce to one .msu or specify which .msu to use in Deploy-Application.ps1." -Source $appDeployToolkitExtName
+                Write-Log -Message "Multiple .msu files found but not sure which one to use. Please reduce to one .msu or specify which .msu to use in the $installerExecutable variable in Deploy-Application.ps1." -Source $appDeployToolkitExtName
             }
 
             else {
@@ -120,6 +128,10 @@ if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
         else {
             [string]$defaultMsuFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -eq "$installerExecutable") } | Select-Object -ExpandProperty 'FullName'
         }         
+    }
+
+    if (-not ([string]::IsNullOrEmpty($defaultMsuFile))) {
+        Write-Log -Message "Microsoft update installer found: $defaultMsuFile." -Source $appDeployToolkitExtName
     }
 }
 
@@ -179,57 +191,46 @@ Function Start-Installation {
     )
 
     if ($installerTechnology -eq "WindowsInstaller")  {
-        Write-Log -Message "$appName uses the Windows installer." -Source $appDeployToolkitExtName
         Install-UsingWindowsInstaller $defaultExeFile $deploymentType
     }
 
     if ($installerTechnology -eq "NSIS")  {
-        Write-Log -Message "$appName uses the NSIS installer (Nullsoft Scriptable Install System)." -Source $appDeployToolkitExtName
         Install-UsingNSISInstaller $defaultExeFile $deploymentType
     }
 
     If ($installerTechnology -eq "Inno Setup") {
-        Write-Log -Message "$appName uses the Inno Setup installer." -Source $appDeployToolkitExtName
         Install-UsingInnoSetupInstaller $defaultExeFile $deploymentType
     }
 
     If ($installerTechnology -eq "InstallShield") {
-        Write-Log -Message "$appName uses the InstallShield installer." -Source $appDeployToolkitExtName
         Install-UsingInstallShieldInstaller $defaultExeFile $deploymentType
     }
 
     If ($installerTechnology -eq "WiXBurn") {
-        Write-Log -Message "$appName uses the Wix Burn installer." -Source $appDeployToolkitExtName
         Install-UsingWixBurnInstaller $defaultExeFile $deploymentType
     }
 
     If ($installerTechnology -eq "Wise")  {
-        Write-Log -Message "$appName uses the Wise installer." -Source $appDeployToolkitExtName
         Install-UsingWiseInstaller $defaultExeFile $deploymentType
     }
 
     If ($installerTechnology -eq "InstallAWARE")  {
-        Write-Log -Message "$appName uses the InstallAWARE installer." -Source $appDeployToolkitExtName
         Install-UsingInstallAWARE $defaultExeFile $deploymentType
     }
 
     If ($installerTechnology -eq "Install4j")  {
-        Write-Log -Message "$appName uses the Install4j installer." -Source $appDeployToolkitExtName
         Install-UsingInstall4j $defaultExeFile $deploymentType
     }
 
     If ($installerTechnology -eq "SetupFactory")  {
-        Write-Log -Message "$userDefinedAppName uses the Setup Factory installer." -Source $appDeployToolkitExtName
         Install-UsingSetupFactory $defaultExeFile $deploymentType
     }
 
     If ($installerTechnology -eq "Office365ClickToRun")  {
-        Write-Log -Message "$appName uses the Microsoft click-to-run installer." -Source $appDeployToolkitExtName
         Install-UsingOffice365ClickToRunInstaller $defaultExeFile $deploymentType
     }
 
     If ($installerTechnology -eq "WindowsUpdateStandaloneInstaller")  {
-        Write-Log -Message "$appName uses the Microsoft Windows update standalone installer." -Source $appDeployToolkitExtName
         Install-UsingWindowsUpdateStandaloneInstaller $defaultMsuFile $deploymentType
     }
 }
@@ -249,6 +250,8 @@ Function Find-InstallerTechnology {
     
     param (
     )
+
+    Write-Log -Message "Attempting to find which installer technology $appName is using." -Source $appDeployToolkitExtName
         
     ## Load the first 100000 characters of Unicode for the .exe and search it for installer technology reference
     if (-not ([string]::IsNullOrEmpty($defaultExeFile))) {
@@ -257,46 +260,57 @@ Function Find-InstallerTechnology {
     }
 
     if (($contentUTF8 -match "Windows installer") -or ($contentUnicode -match "Windows installer")) {
+        Write-Log -Message "$appName uses the Windows installer." -Source $appDeployToolkitExtName
         $installerTechnology = "WindowsInstaller"
     }
 
     elseif ((($contentUTF8 -match "NSIS") -or ($contentUnicode -match "NSIS") -or ($contentUTF8 -match "Nullsoft") -or ($contentUnicode -match "Nullsoft")) -and ( -not ($contentUTF8 -match "ClickToRun")) -and ( -not ($contentUnicode -match "ClickToRun")) -and ( -not ($contentUTF8 -match "Inno Setup")) -and ( -not ($contentUnicode -match "Inno Setup")) -and ( -not ($contentUTF8 -match "InstallShield")) -and ( -not ($contentUnicode -match "InstallShield")))  {
+        Write-Log -Message "$appName uses the NSIS installer (Nullsoft Scriptable Install System)." -Source $appDeployToolkitExtName
         $installerTechnology = "NSIS"
     }
 
     elseif ((($contentUTF8 -match "Inno Setup") -or ($contentUnicode -match "Inno Setup")) -and ( -not ($contentUTF8 -match "InstallAWARE")) -and ( -not ($contentUnicode -match "InstallAWARE")))  {
+        Write-Log -Message "$appName uses the Inno Setup installer." -Source $appDeployToolkitExtName
         $installerTechnology = "Inno Setup"
     }
 
     elseif (($contentUTF8 -match "InstallShield") -or ($contentUnicode -match "InstallShield")) {
+        Write-Log -Message "$appName uses the InstallShield installer." -Source $appDeployToolkitExtName
         $installerTechnology = "InstallShield"
     }
 
     elseif (($contentUTF8 -match "wixburn") -or ($contentUnicode -match "wixburn")) {
+        Write-Log -Message "$appName uses the Wix Burn installer." -Source $appDeployToolkitExtName
         $installerTechnology = "WiXBurn"
     }
 
     elseif (($contentUTF8 -match "WiseMain") -or ($contentUnicode -match "WiseMain") -or ($contentUTF8 -match "Wise Installation") -or ($contentUnicode -match "Wise Installation"))  {
+        Write-Log -Message "$appName uses the Wise installer." -Source $appDeployToolkitExtName
         $installerTechnology = "Wise"
     }
 
     elseif (($contentUTF8 -match "InstallAWARE") -or ($contentUnicode -match "InstallAWARE"))  {
+        Write-Log -Message "$appName uses the InstallAWARE installer." -Source $appDeployToolkitExtName
         $installerTechnology = "InstallAWARE"
     }
 
     elseif (($contentUTF8 -match "install4j") -or ($contentUnicode -match "install4j"))  {
+        Write-Log -Message "$appName uses the Install4j installer." -Source $appDeployToolkitExtName
         $installerTechnology = "Install4j"
     }
 
     elseif (($contentUTF8 -match "Setup Factory") -or ($contentUnicode -match "Setup Factory"))  {
+        Write-Log -Message "$userDefinedAppName uses the Setup Factory installer." -Source $appDeployToolkitExtName
         $installerTechnology = "SetupFactory"
     }
 
     elseif ($contentUTF8 -match "ClickToRun")  {
+        Write-Log -Message "$appName uses the Microsoft click-to-run installer." -Source $appDeployToolkitExtName
         $installerTechnology = "Office365ClickToRun"
     }
 
     elseif (-not ([string]::IsNullOrEmpty($defaultMsuFile))) {
+        Write-Log -Message "$appName uses the Microsoft Windows update standalone installer." -Source $appDeployToolkitExtName
         $installerTechnology = "WindowsUpdateStandaloneInstaller"
     }
 
@@ -304,6 +318,7 @@ Function Find-InstallerTechnology {
         ## If the installer technology wasn't detected then log that and return to Deploy-Application to execute user defined installation tasks.
         ## No log will be written if the logging is disabled, which is used in the prevent multiple unnecessary logs being written while 
         ## name, vendor and version information is being gathered for some installer types.
+        Write-Log -Message "No installer technology was found for $appName." -Source $appDeployToolkitExtName
         $installerTechnology = "Unknown"
     } 
 
@@ -332,6 +347,8 @@ Function Find-UninstallStringInRegistry {
     [hashtable]$returnValues = @{}
     $returnValues.uninstallExe = ""
     $returnValues.arguments = ""
+
+    Write-Log -Message "Attempting to find the uninstall string in the registry." -Source $appDeployToolkitExtName
     
     ## Attempt to find an uninstall string for the app in the Windows uninstall registry key
     ## Start by checking HKEY_LOCAL_MACHINE, both 32-bit and 64-bit on 64-bit systems (only 32-bit on 32-bit systems)
@@ -448,6 +465,19 @@ Function Find-UninstallStringInRegistry {
             $returnValues.arguments = '"' + $returnValues.arguments + '"'
         }
     }
+
+    ## Log the uninstall string and arguments that are found in the registry.
+    if ((-not ([string]::IsNullOrEmpty($returnValues.uninstallExe))) -and (-not ([string]::IsNullOrEmpty($returnValues.arguments)))) {
+        Write-Log -Message "$appName uninstallation string found in registry. It is: $($returnValues.uninstallExe) $($returnValues.arguments)" -Source $appDeployToolkitExtName        
+    }
+        
+    elseif (-not ([string]::IsNullOrEmpty($returnValues.uninstallExe))) {
+        Write-Log -Message "$appName uninstallation string found in registry. It is: $($returnValues.uninstallExe)" -Source $appDeployToolkitExtName            
+    }
+        
+    else {
+        Write-Log -Message "$appName uninstallation string could not be found in the registry." -Source $appDeployToolkitExtName
+    }
     
     return $returnValues
 }
@@ -493,7 +523,7 @@ Function Install-UsingWindowsInstaller {
         }
         
         else {
-            Write-Log -Message "$appName uninstallation string could not be found in the registry. Uninstall will not proceed." -Source $appDeployToolkitExtName
+            Write-Log -Message "Uninstall will not proceed." -Source $appDeployToolkitExtName
             Return
         }
 
@@ -591,7 +621,7 @@ Function Install-UsingNSISInstaller {
         }
         
         else {
-            Write-Log -Message "$appName uninstallation string could not be found in the registry. Uninstall will not proceed." -Source $appDeployToolkitExtName
+            Write-Log -Message "Uninstall will not proceed." -Source $appDeployToolkitExtName
             Return
         }
     }
@@ -632,6 +662,7 @@ Function Install-UsingInnoSetupInstaller {
         }
 
         else {
+            Write-Log -Message "Configuration .inf file found: $infFile." -Source $appDeployToolkitExtName
             $arguments = '/sp- /verysilent /norestart /SuppressMSGBoxes /LoadInf=' + '"' + $infFile + '"' + ' /LOG=' + '"' + "$configToolkitLogDir\$appExeLogFileName" + '_Install.log' + '"'
         }
     }
@@ -708,6 +739,7 @@ Function Install-UsingInstallShieldInstaller {
     if ($deploymentType -eq "Install") {
         [string]$installISS = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -eq 'install.iss') } | Select-Object -ExpandProperty 'FullName'
         if (-not ([string]::IsNullOrEmpty($installISS))) {
+            Write-Log -Message "Install .iss file found: $installISS." -Source $appDeployToolkitExtName
             $arguments = '/s /SMS /f1' + '"' + $installISS + '"' + ' /f2' + '"' + "$configToolkitLogDir\$appExeLogFileName" + '_Install.log' + '"'
         }
         
@@ -721,6 +753,7 @@ Function Install-UsingInstallShieldInstaller {
     if ($deploymentType -eq "Uninstall") {
         [string]$uninstallISS = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -eq 'uninstall.iss') } | Select-Object -ExpandProperty 'FullName'
         if (-not ([string]::IsNullOrEmpty($uninstallISS))) {
+            Write-Log -Message "Uninstall .iss file found: $uninstallISS." -Source $appDeployToolkitExtName
             $arguments = '/s /SMS /uninst /f1' + '"' + $uninstallISS + '"' + ' /f2' + '"' + "$configToolkitLogDir\$appExeLogFileName" + '_Uninstall.log' + '"'
         }
         
@@ -816,7 +849,7 @@ Function Install-UsingWiseInstaller {
         }
         
         else {
-            Write-Log -Message "$appName uninstallation string could not be found in the registry. Uninstall will not proceed." -Source $appDeployToolkitExtName
+            Write-Log -Message "Uninstall will not proceed." -Source $appDeployToolkitExtName
             Return
         }
     }
@@ -906,7 +939,7 @@ Function Install-UsingInstall4j {
         }
         
         else {
-            Write-Log -Message "$appName uninstallation string could not be found in the registry. Uninstall will not proceed." -Source $appDeployToolkitExtName
+            Write-Log -Message "Uninstall will not proceed." -Source $appDeployToolkitExtName
             Return
         }
     }
@@ -955,7 +988,7 @@ Function Install-UsingSetupFactory {
         }
         
         else {
-            Write-Log -Message "$appName uninstallation string could not be found in the registry. Uninstall will not proceed." -Source $appDeployToolkitExtName
+            Write-Log -Message "Uninstall will not proceed." -Source $appDeployToolkitExtName
             Return
         }
     }
@@ -1008,6 +1041,7 @@ Function Install-UsingOffice365ClickToRunInstaller {
     if ($deploymentType -eq "Install") {
         [string]$xmlFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetExtension($_.Name) -eq '.xml') } | Select-Object -ExpandProperty 'FullName' -First 1
         if (-not ([string]::IsNullOrEmpty($xmlFile))) {
+            Write-Log -Message "Configuration .xml file found: $xmlFile." -Source $appDeployToolkitExtName
             $arguments = '/configure ' + '"' + $xmlFile + '"'
         }
 
@@ -1030,7 +1064,7 @@ Function Install-UsingOffice365ClickToRunInstaller {
         }
 
         else {
-            Write-Log -Message "$appName uninstallation string could not be found in the registry. Uninstall will not proceed." -Source $appDeployToolkitExtName
+            Write-Log -Message "Uninstall will not proceed." -Source $appDeployToolkitExtName
             Return
         }
         
@@ -1173,7 +1207,6 @@ if (-not ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath))) {
 }
 
 ## Find which installer technology is being used by the installer.
-Write-Log -Message "Attempting to find which installer technology $appName is using." -Source $appDeployToolkitExtName
 [string]$installerTechnology = Find-InstallerTechnology
 if (-not ([string]::IsNullOrEmpty($defaultExeFile))) {
     ## InstallShield installer files sometimes contain info about InstallShield rather than the product. Get this information from the install.iss file instead.
@@ -1206,7 +1239,7 @@ if (-not ([string]::IsNullOrEmpty($defaultExeFile))) {
     }
 
     ## Office 365 click-to-run version is not held in the setup.exe file, but in the folder name Office\Data\[version].
-    ## Purposefully leave out AppVendor as Microsoft uses their name in the app name (so it reads Microsoft Coproration Microsoft Office 2016...).
+    ## Purposefully leave out AppVendor as Microsoft uses their name in the app name (so it doesn't read Microsoft Coproration Microsoft Office 2016...).
     elseif ($installerTechnology -eq "Office365ClickToRun") {
         [string]$appName =  (Get-Item -Path $defaultExeFile).VersionInfo.FileDescription.Trim()
         [string]$appVersion = (Get-ChildItem -Path "$dirFiles\Office\Data\" -Recurse | ?{ $_.PSIsContainer }).Name
