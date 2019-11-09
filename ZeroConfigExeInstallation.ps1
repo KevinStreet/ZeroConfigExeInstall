@@ -26,14 +26,14 @@
     This script is designed to be used as an extension of the Powershell App Deployment Toolkit.
 .PARAMETER deploymentType
 	Install or uninstall an application.
-    This paramter is passed to the script when invoked from the PADT.
+    This paramter is passed to the script when invoked from the PSADT.
 .EXAMPLE
     ZeroConfigExeInstallation.ps1 -deploymentType Install
 .EXAMPLE
     ZeroConfigExeInstallation.ps1 -deploymentType Uninstall
 .NOTES
-    Script version: 0.3.5
-    Release date: 28/07/2019.
+    Script version: 1.0.0
+    Release date: 09/11/2019.
     Author: Kevin Street.
 .LINK
 	https://kevinstreet.co.uk
@@ -58,7 +58,7 @@ If ($scriptParentPath) {
 	Write-Log -Message "Script [$($MyInvocation.MyCommand.Definition)] dot-source invoked by [$(((Get-Variable -Name MyInvocation).Value).ScriptName)]" -Source $appDeployToolkitExtName
 }
 elseif ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
-	Write-Host "This script is designed to be used as an extension of the Powershell App Deployment Toolkit.`nPlease visit https://kevinstreet.co.uk/zero-config-executable-installation or https://github.com/KevinStreet/ZeroConfigExeInstall for details on how to integrate it. `n`nIf you intended to test whether your application installer is supported by this script, please run it again using the following arguments: `nZeroConfigExeInstallation.ps1 -TestSupportedInstallerTypePath 'C:\Temp\Application\setup.exe'"
+	Write-Host "This script is designed to be used as an extension of the Powershell App Deployment Toolkit.`nPlease visit https://kevinstreet.co.uk/zero-config-executable-installation or https://github.com/KevinStreet/ZeroConfigExeInstall for details on how to integrate it. `n`nIf you intended to test whether your application installer is supported by this script, please run it again using the following arguments: `nZeroConfigExeInstallation.ps1 -TestSupportedInstallerTypePath 'PathToInstallerExe'"
     Exit
 }
 
@@ -67,8 +67,8 @@ elseif ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
 if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
     [string]$appDeployToolkitExtName = 'ZeroConfigExe'
     [string]$appDeployExtScriptFriendlyName = 'Zero-Config Executable Installation'
-    [version]$appDeployExtScriptVersion = [version]'0.3.5'
-    [string]$appDeployExtScriptDate = '28/07/2019'
+    [version]$appDeployExtScriptVersion = [version]'1.0.0'
+    [string]$appDeployExtScriptDate = '09/11/2019'
 
     ## Check for Exe installer and modify the installer path accordingly.
     ## If multiple .exe files are found attempt to find setup.exe or install.exe and use those. If neither exist the user must specify the installer executable in the $installerExecutable variable in Deploy-Application.ps1.
@@ -160,7 +160,7 @@ Function Test-ExeOrMsuIsPresent {
 .EXAMPLE
     Test-ExeOrMsuIsPresent
 .NOTES
-    This function is called to automatically determine if this script should be use to silently install or uninstall an application based on the presence or lack of presence of a .exe or .msu file.
+    This function is called to automatically determine if this script should be used to silently install or uninstall an application based on the presence or lack of presence of a .exe or .msu file.
 #>
     
     param (
@@ -189,7 +189,7 @@ Function Start-Installation {
 .EXAMPLE
 	Start-Installation -deploymentType Uninstall
 .NOTES
-	This function is the main driver for the script and should be called from the Deploy-Application.ps1 script from the PADT.
+	This function is the main driver for the script and should be called from the Deploy-Application.ps1 script from the PSADT.
 #>
 
     param (
@@ -267,7 +267,7 @@ Function Find-InstallerTechnology {
         $contentUnicode = Get-Content -Path $defaultExeFile -Encoding Unicode -TotalCount 100000
     }
 
-    if (($contentUTF8 -match "Windows installer") -or ($contentUnicode -match "Windows installer")) {
+    if ((($contentUTF8 -match "Windows installer") -or ($contentUnicode -match "Windows installer")) -and ( -not ($contentUTF8 -match "InstallShield")) -and ( -not ($contentUnicode -match "InstallShield")) -and ( -not ($contentUTF8 -match "ClickToRun")) -and ( -not ($contentUnicode -match "ClickToRun"))) {
         if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
             Write-Log -Message "$appName uses the Windows installer." -Source $appDeployToolkitExtName
         }
@@ -339,7 +339,7 @@ Function Find-InstallerTechnology {
         $installerTechnology = "SetupFactory"
     }
 
-    elseif ($contentUTF8 -match "ClickToRun")  {
+    elseif (($contentUTF8 -match "ClickToRun") -or ($contentUnicode -match "ClickToRun")) {
         if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
             Write-Log -Message "$appName uses the Microsoft click-to-run installer." -Source $appDeployToolkitExtName
         }
@@ -1330,3 +1330,163 @@ if (-not ([string]::IsNullOrEmpty($defaultMsuFile))) {
 ##*=============================================
 ##* END SCRIPT BODY
 ##*=============================================
+
+# SIG # Begin signature block
+# MIIdZAYJKoZIhvcNAQcCoIIdVTCCHVECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
+# gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUasSPuypg0BfWGsjhGraywSVc
+# 4D6gghiIMIIFTDCCBDSgAwIBAgIRAKLa/6xNrUXkkS75zMNjpi0wDQYJKoZIhvcN
+# AQELBQAwfDELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3Rl
+# cjEQMA4GA1UEBxMHU2FsZm9yZDEYMBYGA1UEChMPU2VjdGlnbyBMaW1pdGVkMSQw
+# IgYDVQQDExtTZWN0aWdvIFJTQSBDb2RlIFNpZ25pbmcgQ0EwHhcNMTkxMDMxMDAw
+# MDAwWhcNMjIxMDMwMjM1OTU5WjCBkjELMAkGA1UEBhMCR0IxEDAOBgNVBBEMB0VD
+# MkE0TkUxDzANBgNVBAgMBkxvbmRvbjEaMBgGA1UECQwRODYtOTAgUGF1bCBTdHJl
+# ZXQxITAfBgNVBAoMGEsgU3RyZWV0IENvbnN1bHRhbmN5IEx0ZDEhMB8GA1UEAwwY
+# SyBTdHJlZXQgQ29uc3VsdGFuY3kgTHRkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+# MIIBCgKCAQEAu9lGsqAElNe5xGFWxK19zB0dl3R81R/4VdMh212QjeNvGb7kZvnn
+# BuAHeQgdip3BIdwp6dpcxlhDKCfWk2BOgpl9iyCsY1H/cu95nL+tOHUsLieow8m+
+# JXfu17Tqta+EvTyi1oau/6VVRLpF/DQS1R1dhO1PkQtrxJ3wWPhOaf5IgeRUA+vR
+# UI2cIkYs4XFoUQ23xnM3nDWCVJmviFk+xTjckLf9azmyjb1C6rCvB5FEtlrwHaoM
+# ImJGtPJfwwRwopyfkr8KrKYyqsz/+Vua/dRihQNys9/X7zHnGhU8+2RXfkQrJ97P
+# X5Bxvv7KY6JHSja21G8mJK6E8XO/QPAK8QIDAQABo4IBsDCCAawwHwYDVR0jBBgw
+# FoAUDuE6qFM6MdWKvsG7rWcaA4WtNA4wHQYDVR0OBBYEFH3GRaH18DbrtLe22E9y
+# S2I5UOkaMA4GA1UdDwEB/wQEAwIHgDAMBgNVHRMBAf8EAjAAMBMGA1UdJQQMMAoG
+# CCsGAQUFBwMDMBEGCWCGSAGG+EIBAQQEAwIEEDBABgNVHSAEOTA3MDUGDCsGAQQB
+# sjEBAgEDAjAlMCMGCCsGAQUFBwIBFhdodHRwczovL3NlY3RpZ28uY29tL0NQUzBD
+# BgNVHR8EPDA6MDigNqA0hjJodHRwOi8vY3JsLnNlY3RpZ28uY29tL1NlY3RpZ29S
+# U0FDb2RlU2lnbmluZ0NBLmNybDBzBggrBgEFBQcBAQRnMGUwPgYIKwYBBQUHMAKG
+# Mmh0dHA6Ly9jcnQuc2VjdGlnby5jb20vU2VjdGlnb1JTQUNvZGVTaWduaW5nQ0Eu
+# Y3J0MCMGCCsGAQUFBzABhhdodHRwOi8vb2NzcC5zZWN0aWdvLmNvbTAoBgNVHREE
+# ITAfgR1jb2Rlc2lnbmluZ0BrZXZpbnN0cmVldC5jby51azANBgkqhkiG9w0BAQsF
+# AAOCAQEAKB8JPeWA4wG/BXbLTWY1oPAnpgrKPBObNcQUFxmMCiGo3WLYW+1GCqKi
+# CLvG0DB74dwOphxvLPAKj1gpn3YEUrO02Kvb1Y0LJthRQOUzr6LZpZTHONgwINlt
+# q3Fuu+LCnK+2mf7W0cBmS2AKD0pyZaJvLded6mwftYcbTp+xxu1b+gM/fsomjd/Y
+# YLQUzAqXbY2q2g7toeuNVnyMnfMYmMvpN2VFWG8zZd8SBDH2/g2NcM5POz5HjNgq
+# +bMhkGfoZjWhm2NPkpwJTnqKnpfLQrtLstMwnWQhYWB3fY+q0V9CVYtfBxzdqKb5
+# SGNGMdVh/sldL1W0ub1CNNRkk6sKzTCCBfUwggPdoAMCAQICEB2iSDBvmyYY0ILg
+# ln0z02owDQYJKoZIhvcNAQEMBQAwgYgxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpO
+# ZXcgSmVyc2V5MRQwEgYDVQQHEwtKZXJzZXkgQ2l0eTEeMBwGA1UEChMVVGhlIFVT
+# RVJUUlVTVCBOZXR3b3JrMS4wLAYDVQQDEyVVU0VSVHJ1c3QgUlNBIENlcnRpZmlj
+# YXRpb24gQXV0aG9yaXR5MB4XDTE4MTEwMjAwMDAwMFoXDTMwMTIzMTIzNTk1OVow
+# fDELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3RlcjEQMA4G
+# A1UEBxMHU2FsZm9yZDEYMBYGA1UEChMPU2VjdGlnbyBMaW1pdGVkMSQwIgYDVQQD
+# ExtTZWN0aWdvIFJTQSBDb2RlIFNpZ25pbmcgQ0EwggEiMA0GCSqGSIb3DQEBAQUA
+# A4IBDwAwggEKAoIBAQCGIo0yhXoYn0nwli9jCB4t3HyfFM/jJrYlZilAhlRGdDFi
+# xRDtsocnppnLlTDAVvWkdcapDlBipVGREGrgS2Ku/fD4GKyn/+4uMyD6DBmJqGx7
+# rQDDYaHcaWVtH24nlteXUYam9CflfGqLlR5bYNV+1xaSnAAvaPeX7Wpyvjg7Y96P
+# v25MQV0SIAhZ6DnNj9LWzwa0VwW2TqE+V2sfmLzEYtYbC43HZhtKn52BxHJAteJf
+# 7wtF/6POF6YtVbC3sLxUap28jVZTxvC6eVBJLPcDuf4vZTXyIuosB69G2flGHNyM
+# fHEo8/6nxhTdVZFuihEN3wYklX0Pp6F8OtqGNWHTAgMBAAGjggFkMIIBYDAfBgNV
+# HSMEGDAWgBRTeb9aqitKz1SA4dibwJ3ysgNmyzAdBgNVHQ4EFgQUDuE6qFM6MdWK
+# vsG7rWcaA4WtNA4wDgYDVR0PAQH/BAQDAgGGMBIGA1UdEwEB/wQIMAYBAf8CAQAw
+# HQYDVR0lBBYwFAYIKwYBBQUHAwMGCCsGAQUFBwMIMBEGA1UdIAQKMAgwBgYEVR0g
+# ADBQBgNVHR8ESTBHMEWgQ6BBhj9odHRwOi8vY3JsLnVzZXJ0cnVzdC5jb20vVVNF
+# UlRydXN0UlNBQ2VydGlmaWNhdGlvbkF1dGhvcml0eS5jcmwwdgYIKwYBBQUHAQEE
+# ajBoMD8GCCsGAQUFBzAChjNodHRwOi8vY3J0LnVzZXJ0cnVzdC5jb20vVVNFUlRy
+# dXN0UlNBQWRkVHJ1c3RDQS5jcnQwJQYIKwYBBQUHMAGGGWh0dHA6Ly9vY3NwLnVz
+# ZXJ0cnVzdC5jb20wDQYJKoZIhvcNAQEMBQADggIBAE1jUO1HNEphpNveaiqMm/EA
+# AB4dYns61zLC9rPgY7P7YQCImhttEAcET7646ol4IusPRuzzRl5ARokS9At3Wpwq
+# QTr81vTr5/cVlTPDoYMot94v5JT3hTODLUpASL+awk9KsY8k9LOBN9O3ZLCmI2pZ
+# aFJCX/8E6+F0ZXkI9amT3mtxQJmWunjxucjiwwgWsatjWsgVgG10Xkp1fqW4w2y1
+# z99KeYdcx0BNYzX2MNPPtQoOCwR/oEuuu6Ol0IQAkz5TXTSlADVpbL6fICUQDRn7
+# UJBhvjmPeo5N9p8OHv4HURJmgyYZSJXOSsnBf/M6BZv5b9+If8AjntIeQ3pFMcGc
+# TanwWbJZGehqjSkEAnd8S0vNcL46slVaeD68u28DECV3FTSK+TbMQ5Lkuk/xYpMo
+# JVcp+1EZx6ElQGqEV8aynbG8HArafGd+fS7pKEwYfsR7MUFxmksp7As9V1DSyt39
+# ngVR5UR43QHesXWYDVQk/fBO4+L4g71yuss9Ou7wXheSaG3IYfmm8SoKC6W59J7u
+# mDIFhZ7r+YMp08Ysfb06dy6LN0KgaoLtO0qqlBCk4Q34F8W2WnkzGJLjtXX4oemO
+# CiUe5B7xn1qHI/+fpFGe+zmAEc3btcSnqIBv5VPU4OOiwtJbGvoyJi1qV3AcPKRY
+# LqPzW0sH3DJZ84enGm1YMIIGajCCBVKgAwIBAgIQAwGaAjr/WLFr1tXq5hfwZjAN
+# BgkqhkiG9w0BAQUFADBiMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQg
+# SW5jMRkwFwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSEwHwYDVQQDExhEaWdpQ2Vy
+# dCBBc3N1cmVkIElEIENBLTEwHhcNMTQxMDIyMDAwMDAwWhcNMjQxMDIyMDAwMDAw
+# WjBHMQswCQYDVQQGEwJVUzERMA8GA1UEChMIRGlnaUNlcnQxJTAjBgNVBAMTHERp
+# Z2lDZXJ0IFRpbWVzdGFtcCBSZXNwb25kZXIwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+# DwAwggEKAoIBAQCjZF38fLPggjXg4PbGKuZJdTvMbuBTqZ8fZFnmfGt/a4ydVfiS
+# 457VWmNbAklQ2YPOb2bu3cuF6V+l+dSHdIhEOxnJ5fWRn8YUOawk6qhLLJGJzF4o
+# 9GS2ULf1ErNzlgpno75hn67z/RJ4dQ6mWxT9RSOOhkRVfRiGBYxVh3lIRvfKDo2n
+# 3k5f4qi2LVkCYYhhchhoubh87ubnNC8xd4EwH7s2AY3vJ+P3mvBMMWSN4+v6GYeo
+# fs/sjAw2W3rBerh4x8kGLkYQyI3oBGDbvHN0+k7Y/qpA8bLOcEaD6dpAoVk62RUJ
+# V5lWMJPzyWHM0AjMa+xiQpGsAsDvpPCJEY93AgMBAAGjggM1MIIDMTAOBgNVHQ8B
+# Af8EBAMCB4AwDAYDVR0TAQH/BAIwADAWBgNVHSUBAf8EDDAKBggrBgEFBQcDCDCC
+# Ab8GA1UdIASCAbYwggGyMIIBoQYJYIZIAYb9bAcBMIIBkjAoBggrBgEFBQcCARYc
+# aHR0cHM6Ly93d3cuZGlnaWNlcnQuY29tL0NQUzCCAWQGCCsGAQUFBwICMIIBVh6C
+# AVIAQQBuAHkAIAB1AHMAZQAgAG8AZgAgAHQAaABpAHMAIABDAGUAcgB0AGkAZgBp
+# AGMAYQB0AGUAIABjAG8AbgBzAHQAaQB0AHUAdABlAHMAIABhAGMAYwBlAHAAdABh
+# AG4AYwBlACAAbwBmACAAdABoAGUAIABEAGkAZwBpAEMAZQByAHQAIABDAFAALwBD
+# AFAAUwAgAGEAbgBkACAAdABoAGUAIABSAGUAbAB5AGkAbgBnACAAUABhAHIAdAB5
+# ACAAQQBnAHIAZQBlAG0AZQBuAHQAIAB3AGgAaQBjAGgAIABsAGkAbQBpAHQAIABs
+# AGkAYQBiAGkAbABpAHQAeQAgAGEAbgBkACAAYQByAGUAIABpAG4AYwBvAHIAcABv
+# AHIAYQB0AGUAZAAgAGgAZQByAGUAaQBuACAAYgB5ACAAcgBlAGYAZQByAGUAbgBj
+# AGUALjALBglghkgBhv1sAxUwHwYDVR0jBBgwFoAUFQASKxOYspkH7R7for5XDStn
+# As0wHQYDVR0OBBYEFGFaTSS2STKdSip5GoNL9B6Jwcp9MH0GA1UdHwR2MHQwOKA2
+# oDSGMmh0dHA6Ly9jcmwzLmRpZ2ljZXJ0LmNvbS9EaWdpQ2VydEFzc3VyZWRJRENB
+# LTEuY3JsMDigNqA0hjJodHRwOi8vY3JsNC5kaWdpY2VydC5jb20vRGlnaUNlcnRB
+# c3N1cmVkSURDQS0xLmNybDB3BggrBgEFBQcBAQRrMGkwJAYIKwYBBQUHMAGGGGh0
+# dHA6Ly9vY3NwLmRpZ2ljZXJ0LmNvbTBBBggrBgEFBQcwAoY1aHR0cDovL2NhY2Vy
+# dHMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0QXNzdXJlZElEQ0EtMS5jcnQwDQYJKoZI
+# hvcNAQEFBQADggEBAJ0lfhszTbImgVybhs4jIA+Ah+WI//+x1GosMe06FxlxF82p
+# G7xaFjkAneNshORaQPveBgGMN/qbsZ0kfv4gpFetW7easGAm6mlXIV00Lx9xsIOU
+# GQVrNZAQoHuXx/Y/5+IRQaa9YtnwJz04HShvOlIJ8OxwYtNiS7Dgc6aSwNOOMdgv
+# 420XEwbu5AO2FKvzj0OncZ0h3RTKFV2SQdr5D4HRmXQNJsQOfxu19aDxxncGKBXp
+# 2JPlVRbwuwqrHNtcSCdmyKOLChzlldquxC5ZoGHd2vNtomHpigtt7BIYvfdVVEAD
+# kitrwlHCCkivsNRu4PQUCjob4489yq9qjXvc2EQwggbNMIIFtaADAgECAhAG/fkD
+# lgOt6gAK6z8nu7obMA0GCSqGSIb3DQEBBQUAMGUxCzAJBgNVBAYTAlVTMRUwEwYD
+# VQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xJDAi
+# BgNVBAMTG0RpZ2lDZXJ0IEFzc3VyZWQgSUQgUm9vdCBDQTAeFw0wNjExMTAwMDAw
+# MDBaFw0yMTExMTAwMDAwMDBaMGIxCzAJBgNVBAYTAlVTMRUwEwYDVQQKEwxEaWdp
+# Q2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xITAfBgNVBAMTGERp
+# Z2lDZXJ0IEFzc3VyZWQgSUQgQ0EtMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+# AQoCggEBAOiCLZn5ysJClaWAc0Bw0p5WVFypxNJBBo/JM/xNRZFcgZ/tLJz4Flnf
+# nrUkFcKYubR3SdyJxArar8tea+2tsHEx6886QAxGTZPsi3o2CAOrDDT+GEmC/sfH
+# MUiAfB6iD5IOUMnGh+s2P9gww/+m9/uizW9zI/6sVgWQ8DIhFonGcIj5BZd9o8dD
+# 3QLoOz3tsUGj7T++25VIxO4es/K8DCuZ0MZdEkKB4YNugnM/JksUkK5ZZgrEjb7S
+# zgaurYRvSISbT0C58Uzyr5j79s5AXVz2qPEvr+yJIvJrGGWxwXOt1/HYzx4KdFxC
+# uGh+t9V3CidWfA9ipD8yFGCV/QcEogkCAwEAAaOCA3owggN2MA4GA1UdDwEB/wQE
+# AwIBhjA7BgNVHSUENDAyBggrBgEFBQcDAQYIKwYBBQUHAwIGCCsGAQUFBwMDBggr
+# BgEFBQcDBAYIKwYBBQUHAwgwggHSBgNVHSAEggHJMIIBxTCCAbQGCmCGSAGG/WwA
+# AQQwggGkMDoGCCsGAQUFBwIBFi5odHRwOi8vd3d3LmRpZ2ljZXJ0LmNvbS9zc2wt
+# Y3BzLXJlcG9zaXRvcnkuaHRtMIIBZAYIKwYBBQUHAgIwggFWHoIBUgBBAG4AeQAg
+# AHUAcwBlACAAbwBmACAAdABoAGkAcwAgAEMAZQByAHQAaQBmAGkAYwBhAHQAZQAg
+# AGMAbwBuAHMAdABpAHQAdQB0AGUAcwAgAGEAYwBjAGUAcAB0AGEAbgBjAGUAIABv
+# AGYAIAB0AGgAZQAgAEQAaQBnAGkAQwBlAHIAdAAgAEMAUAAvAEMAUABTACAAYQBu
+# AGQAIAB0AGgAZQAgAFIAZQBsAHkAaQBuAGcAIABQAGEAcgB0AHkAIABBAGcAcgBl
+# AGUAbQBlAG4AdAAgAHcAaABpAGMAaAAgAGwAaQBtAGkAdAAgAGwAaQBhAGIAaQBs
+# AGkAdAB5ACAAYQBuAGQAIABhAHIAZQAgAGkAbgBjAG8AcgBwAG8AcgBhAHQAZQBk
+# ACAAaABlAHIAZQBpAG4AIABiAHkAIAByAGUAZgBlAHIAZQBuAGMAZQAuMAsGCWCG
+# SAGG/WwDFTASBgNVHRMBAf8ECDAGAQH/AgEAMHkGCCsGAQUFBwEBBG0wazAkBggr
+# BgEFBQcwAYYYaHR0cDovL29jc3AuZGlnaWNlcnQuY29tMEMGCCsGAQUFBzAChjdo
+# dHRwOi8vY2FjZXJ0cy5kaWdpY2VydC5jb20vRGlnaUNlcnRBc3N1cmVkSURSb290
+# Q0EuY3J0MIGBBgNVHR8EejB4MDqgOKA2hjRodHRwOi8vY3JsMy5kaWdpY2VydC5j
+# b20vRGlnaUNlcnRBc3N1cmVkSURSb290Q0EuY3JsMDqgOKA2hjRodHRwOi8vY3Js
+# NC5kaWdpY2VydC5jb20vRGlnaUNlcnRBc3N1cmVkSURSb290Q0EuY3JsMB0GA1Ud
+# DgQWBBQVABIrE5iymQftHt+ivlcNK2cCzTAfBgNVHSMEGDAWgBRF66Kv9JLLgjEt
+# UYunpyGd823IDzANBgkqhkiG9w0BAQUFAAOCAQEARlA+ybcoJKc4HbZbKa9Sz1Lp
+# MUerVlx71Q0LQbPv7HUfdDjyslxhopyVw1Dkgrkj0bo6hnKtOHisdV0XFzRyR4WU
+# VtHruzaEd8wkpfMEGVWp5+Pnq2LN+4stkMLA0rWUvV5PsQXSDj0aqRRbpoYxYqio
+# M+SbOafE9c4deHaUJXPkKqvPnHZL7V/CSxbkS3BMAIke/MV5vEwSV/5f4R68Al2o
+# /vsHOE8Nxl2RuQ9nRc3Wg+3nkg2NsWmMT/tZ4CMP0qquAHzunEIOz5HXJ7cW7g/D
+# vXwKoO4sCFWFIrjrGBpN/CohrUkxg0eVd3HcsRtLSxwQnHcUwZ1PL1qVCCkQJjGC
+# BEYwggRCAgEBMIGRMHwxCzAJBgNVBAYTAkdCMRswGQYDVQQIExJHcmVhdGVyIE1h
+# bmNoZXN0ZXIxEDAOBgNVBAcTB1NhbGZvcmQxGDAWBgNVBAoTD1NlY3RpZ28gTGlt
+# aXRlZDEkMCIGA1UEAxMbU2VjdGlnbyBSU0EgQ29kZSBTaWduaW5nIENBAhEAotr/
+# rE2tReSRLvnMw2OmLTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAA
+# oQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4w
+# DAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUfkg5lDLsxHyaGlq6bvFeRucu
+# 2YEwDQYJKoZIhvcNAQEBBQAEggEAAqp+ISIYR3c9lgoihip5F2c2LUL6y7Wxdka0
+# 3s4Lbx0i70gEulpk9jn9vdkkcm6aPAgkjcZnHeFjCYw7WfSEpKBAmdchotdeta2K
+# cQM4fF3/212cQSqfQWx5GIvz8nJXyD2JAerHpvdNmwlc1a8iz911NiUNFL5nHrcO
+# fF/xauxRzmdeRcKa9adLOXEiYgliEYN3x2rAKRUrUa2w3EE7Z7KrvtnYkVDL1Dyw
+# d2NqE0R98JCIcq0ep2qndpJ6Vh69zzZpfOql1UzQN9bSA6mPw+S4CXkOW7RXCLIi
+# UckCAwE4FTSP+pq0+QHVfW9i9Daj19M6E12gHqXSDAK4JBXSmqGCAg8wggILBgkq
+# hkiG9w0BCQYxggH8MIIB+AIBATB2MGIxCzAJBgNVBAYTAlVTMRUwEwYDVQQKEwxE
+# aWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xITAfBgNVBAMT
+# GERpZ2lDZXJ0IEFzc3VyZWQgSUQgQ0EtMQIQAwGaAjr/WLFr1tXq5hfwZjAJBgUr
+# DgMCGgUAoF0wGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUx
+# DxcNMTkxMTA5MTg1MDI2WjAjBgkqhkiG9w0BCQQxFgQUFPQTU5Ap6iYiWSOgwudD
+# fSDw8/AwDQYJKoZIhvcNAQEBBQAEggEAgJMMSw6ZBRcSgaXLF7kgeQfEcAhUj4AL
+# aJ7qx+lZf7ft3M33kCiqCm5M++kMoxSqHMS+juWqMjleYrWryQBEZiO4aGgFhT+O
+# mzYgXd1QGG12uhhdl6kND36WMrQFjEfYBp/P0albJW+rpCtaQD7d0dzQ/7xMU+nJ
+# vl7s+kgLf+yiApx0dByaMiMkaLDVs+8RK/OwHUMqSxC+ozl4G765shtLrKn3uGV6
+# Sv22QBUtHlVkhK3qWWnBv82YkI779Cbs4I1f4d8D/nZJh1HITAjcpVHApCmr8KTV
+# 6cXVp6Vo5Rm4EyDjjucV3GQEv1UJUL4gcxkYn6kNN8s4Knd36LuaOw==
+# SIG # End signature block
