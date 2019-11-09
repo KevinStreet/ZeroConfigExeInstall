@@ -37,7 +37,7 @@ Param (
 
 # <Your custom functions go here>
 If (Test-Path -LiteralPath "$scriptDirectory\SupportFiles\ZeroConfigExeInstallation.ps1" -PathType 'Leaf') {
-. "$scriptDirectory\SupportFiles\ZeroConfigExeInstallation.ps1"
+    . "$scriptDirectory\SupportFiles\ZeroConfigExeInstallation.ps1"
 }
 
 ##*===============================================

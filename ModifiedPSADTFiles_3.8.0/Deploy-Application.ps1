@@ -70,13 +70,13 @@ Try {
 	[string]$appScriptVersion = '1.0.0'
 	[string]$appScriptDate = '23/09/2019'
 	[string]$appScriptAuthor = '<author name>'
-    [string]$installerExecutable = ""
+	[string]$installerExecutable = ""
 	##*===============================================
 	## Variables: Install Titles (Only set here to override defaults set by the toolkit)
 	[string]$installName = ''
 	[string]$installTitle = ''
-    ## Variables: Keep unmodified application name (needed for some uninstalls)
-    [string]$userDefinedAppName = $appName
+	## Variables: Keep unmodified application name (needed for some uninstalls)
+	[string]$userDefinedAppName = $appName
 
 	##* Do not modify section below
 	#region DoNotModify
@@ -122,10 +122,10 @@ Try {
 		## Show Welcome Message, close Internet Explorer if required, allow up to 3 deferrals, verify there is enough disk space to complete the install, and persist the prompt
 		Show-InstallationWelcome -CloseApps 'iexplorer' -AllowDefer -DeferTimes 3 -CheckDiskSpace -PersistPrompt
 
-        ## If using Zero-Config Exe the $installTitle needs to be set here
-        if (Test-ExeOrMsuIsPresent) {
-	        [string]$installTitle = ("$appVendor $appName $appVersion")
-        }
+    	## If using Zero-Config Exe the $installTitle needs to be set here
+    	if (Test-ExeOrMsuIsPresent) {
+			[string]$installTitle = ("$appVendor $appName $appVersion")
+    	}
 
 		## Show Progress Message (with the default message)
 		Show-InstallationProgress
@@ -144,11 +144,11 @@ Try {
 			Execute-MSI @ExecuteDefaultMSISplat; If ($defaultMspFiles) { $defaultMspFiles | ForEach-Object { Execute-MSI -Action 'Patch' -Path $_ } }
 		}
 
-        ## Handle Zero-Config Exe Installation
-        [bool]$overrideDefaultInstall = $false
-        If ((-not ($useDefaultMsi)) -and (Test-ExeOrMsuIsPresent) -and (-not ($overrideDefaultInstall))) {
-	        Start-Installation($DeploymentType)
-        }
+    	## Handle Zero-Config Exe Installation
+    	[bool]$overrideDefaultInstall = $false
+    	If ((-not ($useDefaultMsi)) -and (Test-ExeOrMsuIsPresent) -and (-not ($overrideDefaultInstall))) {
+			Start-Installation($DeploymentType)
+    	}
 
 		## <Perform Installation tasks here>
 
@@ -174,9 +174,9 @@ Try {
 		Show-InstallationWelcome -CloseApps 'iexplorer' -CloseAppsCountdown 60
 
         ## If using Zero-Config Exe the $installTitle needs to be set here
-        if (Test-ExeOrMsuIsPresent) {
-	        [string]$installTitle = ("$appVendor $appName $appVersion")
-        }
+    	if (Test-ExeOrMsuIsPresent) {
+			[string]$installTitle = ("$appVendor $appName $appVersion")
+    	}
 
 		## Show Progress Message (with the default message)
 		Show-InstallationProgress
@@ -195,11 +195,11 @@ Try {
 			Execute-MSI @ExecuteDefaultMSISplat
 		}
 
-        ## Handle Zero-Config Exe Uninstallation
-        [bool]$overrideDefaultUninstall = $false
-        If ((-not ($useDefaultMsi)) -and (Test-ExeOrMsuIsPresent) -and (-not ($overrideDefaultUninstall))) {            
-            Start-Installation($DeploymentType)
-        }
+    	## Handle Zero-Config Exe Uninstallation
+    	[bool]$overrideDefaultUninstall = $false
+    	If ((-not ($useDefaultMsi)) -and (Test-ExeOrMsuIsPresent) -and (-not ($overrideDefaultUninstall))) {            
+    		Start-Installation($DeploymentType)
+    	}
 
 		# <Perform Uninstallation tasks here>
 
