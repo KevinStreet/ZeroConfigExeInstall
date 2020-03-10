@@ -3,7 +3,7 @@
 	This script is used to determine which installer an executable is using and silently install or uninstall it using default parameters.
 	# LICENSE #
 	Zero-Config Executable Installation. 
-	Copyright (C) 2019 - Kevin Street.
+	Copyright (C) 2020 - Kevin Street.
 	This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. 
 	You should have received a copy of the GNU Lesser General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.
 .DESCRIPTION
@@ -32,8 +32,8 @@
 .EXAMPLE
     ZeroConfigExeInstallation.ps1 -deploymentType Uninstall
 .NOTES
-    Script version: 1.0.0
-    Release date: 09/11/2019.
+    Script version: 1.1.0
+    Release date: 10/03/2020.
     Author: Kevin Street.
 .LINK
 	https://kevinstreet.co.uk
@@ -67,15 +67,29 @@ elseif ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
 if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
     [string]$appDeployToolkitExtName = 'ZeroConfigExe'
     [string]$appDeployExtScriptFriendlyName = 'Zero-Config Executable Installation'
-    [version]$appDeployExtScriptVersion = [version]'1.0.0'
-    [string]$appDeployExtScriptDate = '09/11/2019'
+    [version]$appDeployExtScriptVersion = [version]'1.1.0'
+    [string]$appDeployExtScriptDate = '10/03/2020'
 
     ## Check for Exe installer and modify the installer path accordingly.
-    ## If multiple .exe files are found attempt to find setup.exe or install.exe and use those. If neither exist the user must specify the installer executable in the $installerExecutable variable in Deploy-Application.ps1.
+    ## If multiple .exe files are found, the user may be including both x86 and x64 installers. Check for "86" or "32" and "64" in the names.
+    ## If multiple .exe files but they are not for x86 and x64, then look for setup.exe or install.exe and use those.
+    ## If neither exist the user must specify the installer executable in the $installerExecutable variable in Deploy-Application.ps1.
     if ([string]::IsNullOrEmpty($installerExecutable)) {
         [array]$exesInPath = (Get-ChildItem -Path "$dirFiles\*.exe").Name
         if ($exesInPath.Count -gt 1) {
-            if ($exesInPath -contains "setup.exe") {
+            if ((($exesInPath -like "*86*") -or $exesInPath -like "*32*") -and ($exesInPath -like "*64*")) {
+                if ($Is64Bit) {
+                    [string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -like '*64*') } | Select-Object -ExpandProperty 'FullName'
+                    Write-Log -Message "x86 and x64 installers found. This system is x64, so x64 installer will be used." -Source $appDeployToolkitExtName
+                }
+
+                else {
+                    [string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and (([IO.Path]::GetFileName($_.Name) -like '*86*') -or ([IO.Path]::GetFileName($_.Name) -like '*32*')) } | Select-Object -ExpandProperty 'FullName'
+                    Write-Log -Message "x86 and x64 installers found. This system is x86, so x86 installer will be used." -Source $appDeployToolkitExtName
+                }
+            }
+
+            elseif ($exesInPath -contains "setup.exe") {
                 [string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -eq 'setup.exe') } | Select-Object -ExpandProperty 'FullName'
             }
 
@@ -1334,8 +1348,8 @@ if (-not ([string]::IsNullOrEmpty($defaultMsuFile))) {
 # SIG # Begin signature block
 # MIIdZAYJKoZIhvcNAQcCoIIdVTCCHVECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUasSPuypg0BfWGsjhGraywSVc
-# 4D6gghiIMIIFTDCCBDSgAwIBAgIRAKLa/6xNrUXkkS75zMNjpi0wDQYJKoZIhvcN
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUc8WG4fD1RXI1wTS5DmNm0tHV
+# 5y2gghiIMIIFTDCCBDSgAwIBAgIRAKLa/6xNrUXkkS75zMNjpi0wDQYJKoZIhvcN
 # AQELBQAwfDELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3Rl
 # cjEQMA4GA1UEBxMHU2FsZm9yZDEYMBYGA1UEChMPU2VjdGlnbyBMaW1pdGVkMSQw
 # IgYDVQQDExtTZWN0aWdvIFJTQSBDb2RlIFNpZ25pbmcgQ0EwHhcNMTkxMDMxMDAw
@@ -1471,22 +1485,22 @@ if (-not ([string]::IsNullOrEmpty($defaultMsuFile))) {
 # aXRlZDEkMCIGA1UEAxMbU2VjdGlnbyBSU0EgQ29kZSBTaWduaW5nIENBAhEAotr/
 # rE2tReSRLvnMw2OmLTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAA
 # oQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4w
-# DAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUfkg5lDLsxHyaGlq6bvFeRucu
-# 2YEwDQYJKoZIhvcNAQEBBQAEggEAAqp+ISIYR3c9lgoihip5F2c2LUL6y7Wxdka0
-# 3s4Lbx0i70gEulpk9jn9vdkkcm6aPAgkjcZnHeFjCYw7WfSEpKBAmdchotdeta2K
-# cQM4fF3/212cQSqfQWx5GIvz8nJXyD2JAerHpvdNmwlc1a8iz911NiUNFL5nHrcO
-# fF/xauxRzmdeRcKa9adLOXEiYgliEYN3x2rAKRUrUa2w3EE7Z7KrvtnYkVDL1Dyw
-# d2NqE0R98JCIcq0ep2qndpJ6Vh69zzZpfOql1UzQN9bSA6mPw+S4CXkOW7RXCLIi
-# UckCAwE4FTSP+pq0+QHVfW9i9Daj19M6E12gHqXSDAK4JBXSmqGCAg8wggILBgkq
+# DAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQU54r9XAaB49lP5d5pkZh4uSYU
+# d5gwDQYJKoZIhvcNAQEBBQAEggEAJX2MIbad0lKDC02PN7ecIHBa+2DDtVRx7kSr
+# fLKrf1pvR1PB8jWYWyqZsPWtrppU9aArC+FY8QQoaAjXVanagHUsUdEYYSl2bz94
+# yIEZKF/abZn2/pd23veCYBQUd3uZkhV2/Rc3LYqaZ7UR3gjAPJlUxUbRj9E8RTef
+# 1qjbKv5tmWv5ptfg40tUzzr/FVQbx8dqqSxlPlvehE1pXfRhr0X+Wr1VjX8X+h5b
+# pIRqtrj2zvzGiDfK1cOBrR+LT2wU2AxjSmrYymhJPRfTbksMEcQbGDLwh4PMyYL5
+# PdkeccgTl8jr53rsv1gTGA6M356leuYZhC+dObPzEt/yinWGJ6GCAg8wggILBgkq
 # hkiG9w0BCQYxggH8MIIB+AIBATB2MGIxCzAJBgNVBAYTAlVTMRUwEwYDVQQKEwxE
 # aWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xITAfBgNVBAMT
 # GERpZ2lDZXJ0IEFzc3VyZWQgSUQgQ0EtMQIQAwGaAjr/WLFr1tXq5hfwZjAJBgUr
 # DgMCGgUAoF0wGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUx
-# DxcNMTkxMTA5MTg1MDI2WjAjBgkqhkiG9w0BCQQxFgQUFPQTU5Ap6iYiWSOgwudD
-# fSDw8/AwDQYJKoZIhvcNAQEBBQAEggEAgJMMSw6ZBRcSgaXLF7kgeQfEcAhUj4AL
-# aJ7qx+lZf7ft3M33kCiqCm5M++kMoxSqHMS+juWqMjleYrWryQBEZiO4aGgFhT+O
-# mzYgXd1QGG12uhhdl6kND36WMrQFjEfYBp/P0albJW+rpCtaQD7d0dzQ/7xMU+nJ
-# vl7s+kgLf+yiApx0dByaMiMkaLDVs+8RK/OwHUMqSxC+ozl4G765shtLrKn3uGV6
-# Sv22QBUtHlVkhK3qWWnBv82YkI779Cbs4I1f4d8D/nZJh1HITAjcpVHApCmr8KTV
-# 6cXVp6Vo5Rm4EyDjjucV3GQEv1UJUL4gcxkYn6kNN8s4Knd36LuaOw==
+# DxcNMjAwMzEwMjI1NjA5WjAjBgkqhkiG9w0BCQQxFgQUYMq+1YwHeRsEnIwLWoeA
+# kG/nqLgwDQYJKoZIhvcNAQEBBQAEggEAMBFVtSOc2kwv4UA+wPvUE6jVR0XWtetY
+# VPflsK6fgJmcYvkJ4gT0FeE87oHEka8liQqCs5D13eAu2T6TZLICWcOcwjEQlpoO
+# Waz/Ez3M3VgF3j1QAtcIlFPuzxAnpbNn4xSP4BhQo9QyUEAJm6q0iim4WvrDkNML
+# +dQkN4TPjmB2PRLL5ipAhAUiGYiarU6rmylS+pr8dlfJ5xvpOSqiPSw2ANTYr57z
+# S5GKBK0lH6D8cGl46vasr3u4Pbb1F3NSiO5YGH5e9RQUFtX/DvhmlVzwuN4ZhvR8
+# 5C6I/OgRa0ZYXJ3aGHclUboWR+Zwt71ry6QgmenO4cAvkPmwjNCRxw==
 # SIG # End signature block
