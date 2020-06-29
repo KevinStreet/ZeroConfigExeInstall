@@ -33,7 +33,7 @@
     ZeroConfigExeInstallation.ps1 -deploymentType Uninstall
 .NOTES
     Script version: 1.1.0
-    Release date: 10/03/2020.
+    Release date: 29/06/2020.
     Author: Kevin Street.
 .LINK
 	https://kevinstreet.co.uk
@@ -68,7 +68,7 @@ if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
     [string]$appDeployToolkitExtName = 'ZeroConfigExe'
     [string]$appDeployExtScriptFriendlyName = 'Zero-Config Executable Installation'
     [version]$appDeployExtScriptVersion = [version]'1.1.0'
-    [string]$appDeployExtScriptDate = '10/03/2020'
+    [string]$appDeployExtScriptDate = '20/06/2020'
 
     ## Check for Exe installer and modify the installer path accordingly.
     ## If multiple .exe files are found, the user may be including both x86 and x64 installers. Check for "86" or "32" and "64" in the names.
@@ -408,8 +408,11 @@ Function Find-UninstallStringInRegistry {
     
     ## Attempt to find an uninstall string for the app in the Windows uninstall registry key.
     ## Start by checking HKEY_LOCAL_MACHINE, both 32-bit and 64-bit on 64-bit systems (only 32-bit on 32-bit systems).
-    $uninstallKey = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
-    if ($Is64Bit) {
+    if (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall') {
+        $uninstallKey = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+    }
+
+    if (($Is64Bit) -and (Test-Path 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
         $uninstallKey6432 = Get-ChildItem 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
     }
 
@@ -450,8 +453,10 @@ Function Find-UninstallStringInRegistry {
     ## the script has been called by SCCM) then skip the HKCU section.
     if (([Security.Principal.WindowsIdentity]::GetCurrent().Name) -ne "NT AUTHORITY\SYSTEM") {
         if (([string]::IsNullOrEmpty($uninstallString)) -and ([string]::IsNullOrEmpty($quietUninstallString))) {
-            $uninstallKey = Get-ChildItem 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
-    
+            if (Test-Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall') {
+                $uninstallKey = Get-ChildItem 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+            }
+
             foreach ($key in $uninstallKey) {
                 $registryKey = ($key.Name) -replace "HKEY_CURRENT_USER", "HKCU:"
                 $registryProperties = Get-ItemProperty -Path $registryKey
@@ -595,9 +600,9 @@ Function Install-UsingWindowsInstaller {
         }
     }
 
-    ## Install or uninstall string has been worked out, execution process
-    ## Log file is written to %TEMP% during install.
-    ## Log file will be copied to user defined log location when the install finishes.
+    ## Install or uninstall string has been worked out, execution process.
+    ## Log file is sometimes written to %TEMP% during an install or uninstall.
+    ## If this application has logged to %TEMP%, the Log file will be copied to the user defined log location when the install finishes.
     [DateTime]$installationStartTime = Get-Date
     Write-Log -Message "Full command is $defaultExeFile $arguments" -Source $appDeployToolkitExtName
     Start-Process $defaultExeFile -ArgumentList $arguments -Wait
@@ -613,7 +618,9 @@ Function Install-UsingWindowsInstaller {
         }
 
         else {
-            Copy-Item -Path $logFile.FullName -Destination ("$configToolkitLogDir\$appExeLogFileName" + '_Install.log')
+            if (-not ([string]::IsNullOrEmpty($logFile.FullName))) {
+                Copy-Item -Path $logFile.FullName -Destination ("$configToolkitLogDir\$appExeLogFileName" + '_Install.log')
+            }
         }
     }
 }
@@ -1339,17 +1346,11 @@ if (-not ([string]::IsNullOrEmpty($defaultMsuFile))) {
     Write-Log -Message "App Name [$appName]." -Source $appDeployToolkitExtName
     Write-Log -Message "App Version [$appVersion]." -Source $appDeployToolkitExtName
 }
-
-##endregion
-##*=============================================
-##* END SCRIPT BODY
-##*=============================================
-
 # SIG # Begin signature block
 # MIIdZAYJKoZIhvcNAQcCoIIdVTCCHVECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUc8WG4fD1RXI1wTS5DmNm0tHV
-# 5y2gghiIMIIFTDCCBDSgAwIBAgIRAKLa/6xNrUXkkS75zMNjpi0wDQYJKoZIhvcN
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUTr0CWVZjOaOTAmcE6l21INV4
+# XYigghiIMIIFTDCCBDSgAwIBAgIRAKLa/6xNrUXkkS75zMNjpi0wDQYJKoZIhvcN
 # AQELBQAwfDELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3Rl
 # cjEQMA4GA1UEBxMHU2FsZm9yZDEYMBYGA1UEChMPU2VjdGlnbyBMaW1pdGVkMSQw
 # IgYDVQQDExtTZWN0aWdvIFJTQSBDb2RlIFNpZ25pbmcgQ0EwHhcNMTkxMDMxMDAw
@@ -1485,22 +1486,22 @@ if (-not ([string]::IsNullOrEmpty($defaultMsuFile))) {
 # aXRlZDEkMCIGA1UEAxMbU2VjdGlnbyBSU0EgQ29kZSBTaWduaW5nIENBAhEAotr/
 # rE2tReSRLvnMw2OmLTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAA
 # oQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4w
-# DAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQU54r9XAaB49lP5d5pkZh4uSYU
-# d5gwDQYJKoZIhvcNAQEBBQAEggEAJX2MIbad0lKDC02PN7ecIHBa+2DDtVRx7kSr
-# fLKrf1pvR1PB8jWYWyqZsPWtrppU9aArC+FY8QQoaAjXVanagHUsUdEYYSl2bz94
-# yIEZKF/abZn2/pd23veCYBQUd3uZkhV2/Rc3LYqaZ7UR3gjAPJlUxUbRj9E8RTef
-# 1qjbKv5tmWv5ptfg40tUzzr/FVQbx8dqqSxlPlvehE1pXfRhr0X+Wr1VjX8X+h5b
-# pIRqtrj2zvzGiDfK1cOBrR+LT2wU2AxjSmrYymhJPRfTbksMEcQbGDLwh4PMyYL5
-# PdkeccgTl8jr53rsv1gTGA6M356leuYZhC+dObPzEt/yinWGJ6GCAg8wggILBgkq
+# DAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUFOFH/5Qe4d8f2LsUIN64fgmb
+# t5IwDQYJKoZIhvcNAQEBBQAEggEACyCWJVp7QbCTGg4a62gNhou01XfngGj5eqis
+# AxNyzR5aEzNnqufcvW/g4ixHNtRapH6Q4nhii/qKlNIT+0HWuAj0XicjVhBatQRV
+# 0+lVbL59gMojYDmLI6bKZfWewbxbYVVcnEYyM7196KUzzRWxgEmT+DDP/pX5QBwP
+# M5mIcR+NpUkid0jP+UsGN8g369XlCBX4iry8QLyc4ZflqVrC4yXEKIHGlU3M0l6I
+# VFR8yEQdtVnNJnzq3tmUEhtW5r6ji9/nWDGpZPt1e6CsEjhX4ybHE0dNud7p4HMD
+# QTn23HsRjVIKw/uaRTjyljN7klLMMmhNB/J3NtEIPUHzSHzjE6GCAg8wggILBgkq
 # hkiG9w0BCQYxggH8MIIB+AIBATB2MGIxCzAJBgNVBAYTAlVTMRUwEwYDVQQKEwxE
 # aWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xITAfBgNVBAMT
 # GERpZ2lDZXJ0IEFzc3VyZWQgSUQgQ0EtMQIQAwGaAjr/WLFr1tXq5hfwZjAJBgUr
 # DgMCGgUAoF0wGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUx
-# DxcNMjAwMzEwMjI1NjA5WjAjBgkqhkiG9w0BCQQxFgQUYMq+1YwHeRsEnIwLWoeA
-# kG/nqLgwDQYJKoZIhvcNAQEBBQAEggEAMBFVtSOc2kwv4UA+wPvUE6jVR0XWtetY
-# VPflsK6fgJmcYvkJ4gT0FeE87oHEka8liQqCs5D13eAu2T6TZLICWcOcwjEQlpoO
-# Waz/Ez3M3VgF3j1QAtcIlFPuzxAnpbNn4xSP4BhQo9QyUEAJm6q0iim4WvrDkNML
-# +dQkN4TPjmB2PRLL5ipAhAUiGYiarU6rmylS+pr8dlfJ5xvpOSqiPSw2ANTYr57z
-# S5GKBK0lH6D8cGl46vasr3u4Pbb1F3NSiO5YGH5e9RQUFtX/DvhmlVzwuN4ZhvR8
-# 5C6I/OgRa0ZYXJ3aGHclUboWR+Zwt71ry6QgmenO4cAvkPmwjNCRxw==
+# DxcNMjAwNjI5MjEyODAzWjAjBgkqhkiG9w0BCQQxFgQUF802khKA6WMvPiVvX0Al
+# Isp4TsMwDQYJKoZIhvcNAQEBBQAEggEAiqTpV1X9xjYKh+5ZDRViGOdjICXJrqUb
+# +3BHpFAaBtvurSGYGC3nNMYnRobPOchB94kHeEgzrTI/Tta/Boo/M14Irzyg++M3
+# gZmMAUYIAicCw5rGuSIFmHaZnyJwOMSg9VAss6jNxFTMr0JFMWEznN6C1dzob6Ew
+# gl7S5Y0NsRsTb51nPIVQFsY7o95RC7g6TlhAhap5hYs3tY15t0XB2Iq0SZZJ83gV
+# 7ojldxNZlZp7eojoKo8HDRYXZtyMHrEJfbAa6VQPGnuhgWqCgyNMoiVRAlPX8Dt0
+# n21u5sr6WXw5UMZf1Vqdc44I7ManaN+API1vqectlmy80jiWnN7xdw==
 # SIG # End signature block
