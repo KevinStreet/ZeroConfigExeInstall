@@ -33,7 +33,7 @@
     ZeroConfigExeInstallation.ps1 -deploymentType Uninstall
 .NOTES
     Script version: 1.1.0
-    Release date: 29/06/2020.
+    Release date: 30/06/2020.
     Author: Kevin Street.
 .LINK
 	https://kevinstreet.co.uk
@@ -68,14 +68,14 @@ if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
     [string]$appDeployToolkitExtName = 'ZeroConfigExe'
     [string]$appDeployExtScriptFriendlyName = 'Zero-Config Executable Installation'
     [version]$appDeployExtScriptVersion = [version]'1.1.0'
-    [string]$appDeployExtScriptDate = '20/06/2020'
+    [string]$appDeployExtScriptDate = '30/06/2020'
 
     ## Check for Exe installer and modify the installer path accordingly.
     ## If multiple .exe files are found, the user may be including both x86 and x64 installers. Check for "86" or "32" and "64" in the names.
     ## If multiple .exe files but they are not for x86 and x64, then look for setup.exe or install.exe and use those.
     ## If neither exist the user must specify the installer executable in the $installerExecutable variable in Deploy-Application.ps1.
     if ([string]::IsNullOrEmpty($installerExecutable)) {
-        [array]$exesInPath = (Get-ChildItem -Path "$dirFiles\*.exe").Name
+        [array]$exesInPath = @((Get-ChildItem -Path "$dirFiles\*.exe") | Select-Object -Expand Name)
         if ($exesInPath.Count -gt 1) {
             if ((($exesInPath -like "*86*") -or $exesInPath -like "*32*") -and ($exesInPath -like "*64*")) {
                 if ($Is64Bit) {
@@ -129,7 +129,7 @@ if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
     ## If multiple .msu files are found inform the user they must specify which one they want in $installerExecutable in Deploy-Application.ps1.
     if ([string]::IsNullOrEmpty($defaultExeFile)) {
         if ([string]::IsNullOrEmpty($installerExecutable)) {
-            [array]$msusInPath = (Get-ChildItem -Path "$dirFiles\*.msu").Name
+            [array]$msusInPath = @((Get-ChildItem -Path "$dirFiles\*.msu") | Select-Object -Expand Name)
             if ($msusInPath -gt 1) {
                 Write-Log -Message "Multiple .msu files found but not sure which one to use. Please reduce to one .msu or specify which .msu to use in the $installerExecutable variable in Deploy-Application.ps1." -Source $appDeployToolkitExtName
             }
@@ -611,8 +611,8 @@ Function Install-UsingWindowsInstaller {
         $logFile = Get-ChildItem -Path $env:TEMP -Filter "*.txt" | Where-Object {$_.LastWriteTime -gt $installationStartTime}
         if ($logFile -is [Array]){
             $logCounter = 1
-            foreach ($log in $logFile.FullName) {
-                Copy-Item -Path $log -Destination ("$configToolkitLogDir\$appExeLogFileName" + "_" + "$logCounter" + '_Install.log')
+            foreach ($log in $logFile) {
+                Copy-Item -Path $log.FullName -Destination ("$configToolkitLogDir\$appExeLogFileName" + "_" + "$logCounter" + '_Install.log')
                 $logCounter++
             }
         }
@@ -1346,11 +1346,12 @@ if (-not ([string]::IsNullOrEmpty($defaultMsuFile))) {
     Write-Log -Message "App Name [$appName]." -Source $appDeployToolkitExtName
     Write-Log -Message "App Version [$appVersion]." -Source $appDeployToolkitExtName
 }
+
 # SIG # Begin signature block
 # MIIdZAYJKoZIhvcNAQcCoIIdVTCCHVECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUTr0CWVZjOaOTAmcE6l21INV4
-# XYigghiIMIIFTDCCBDSgAwIBAgIRAKLa/6xNrUXkkS75zMNjpi0wDQYJKoZIhvcN
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUVOaEqtO4gtmvX1z2f2u0EuC/
+# f+6gghiIMIIFTDCCBDSgAwIBAgIRAKLa/6xNrUXkkS75zMNjpi0wDQYJKoZIhvcN
 # AQELBQAwfDELMAkGA1UEBhMCR0IxGzAZBgNVBAgTEkdyZWF0ZXIgTWFuY2hlc3Rl
 # cjEQMA4GA1UEBxMHU2FsZm9yZDEYMBYGA1UEChMPU2VjdGlnbyBMaW1pdGVkMSQw
 # IgYDVQQDExtTZWN0aWdvIFJTQSBDb2RlIFNpZ25pbmcgQ0EwHhcNMTkxMDMxMDAw
@@ -1486,22 +1487,22 @@ if (-not ([string]::IsNullOrEmpty($defaultMsuFile))) {
 # aXRlZDEkMCIGA1UEAxMbU2VjdGlnbyBSU0EgQ29kZSBTaWduaW5nIENBAhEAotr/
 # rE2tReSRLvnMw2OmLTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAA
 # oQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4w
-# DAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUFOFH/5Qe4d8f2LsUIN64fgmb
-# t5IwDQYJKoZIhvcNAQEBBQAEggEACyCWJVp7QbCTGg4a62gNhou01XfngGj5eqis
-# AxNyzR5aEzNnqufcvW/g4ixHNtRapH6Q4nhii/qKlNIT+0HWuAj0XicjVhBatQRV
-# 0+lVbL59gMojYDmLI6bKZfWewbxbYVVcnEYyM7196KUzzRWxgEmT+DDP/pX5QBwP
-# M5mIcR+NpUkid0jP+UsGN8g369XlCBX4iry8QLyc4ZflqVrC4yXEKIHGlU3M0l6I
-# VFR8yEQdtVnNJnzq3tmUEhtW5r6ji9/nWDGpZPt1e6CsEjhX4ybHE0dNud7p4HMD
-# QTn23HsRjVIKw/uaRTjyljN7klLMMmhNB/J3NtEIPUHzSHzjE6GCAg8wggILBgkq
+# DAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUniI7C4qWMcfflnG9vKL/cXFw
+# wlowDQYJKoZIhvcNAQEBBQAEggEAqAIgXaGnfCLk7j/2gQhosVXV1sgddwAtKX7+
+# QEB+k+SgCB9x4vA1cs3NVG7sHU2ORT/a2AljKOfWh2qmO+tiAiKfh1HvjI2evALi
+# A1A6vpJC0uyoKcztFkzHBEaojuw1O/pNQupj4CyBGSHnril6tn7Dfi403QUm6wj2
+# LAWV3dwRwaw5+9NIrVy5RjhGOz8Wc//ZhDsXu5AGiAxhyeM8iOX0CJeO5y0k3L8j
+# yaLr4rfqdV70kJKifEP/h3Jr4ABv0KwyDUfRebLfEUIhKDhBbLdSZ8GZHIqPP+NN
+# PLvJYDoaNK+ocOfgV8VOUFLeB2gBr8WsKQuNlP7mostuZ9Rt1qGCAg8wggILBgkq
 # hkiG9w0BCQYxggH8MIIB+AIBATB2MGIxCzAJBgNVBAYTAlVTMRUwEwYDVQQKEwxE
 # aWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xITAfBgNVBAMT
 # GERpZ2lDZXJ0IEFzc3VyZWQgSUQgQ0EtMQIQAwGaAjr/WLFr1tXq5hfwZjAJBgUr
 # DgMCGgUAoF0wGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUx
-# DxcNMjAwNjI5MjEyODAzWjAjBgkqhkiG9w0BCQQxFgQUF802khKA6WMvPiVvX0Al
-# Isp4TsMwDQYJKoZIhvcNAQEBBQAEggEAiqTpV1X9xjYKh+5ZDRViGOdjICXJrqUb
-# +3BHpFAaBtvurSGYGC3nNMYnRobPOchB94kHeEgzrTI/Tta/Boo/M14Irzyg++M3
-# gZmMAUYIAicCw5rGuSIFmHaZnyJwOMSg9VAss6jNxFTMr0JFMWEznN6C1dzob6Ew
-# gl7S5Y0NsRsTb51nPIVQFsY7o95RC7g6TlhAhap5hYs3tY15t0XB2Iq0SZZJ83gV
-# 7ojldxNZlZp7eojoKo8HDRYXZtyMHrEJfbAa6VQPGnuhgWqCgyNMoiVRAlPX8Dt0
-# n21u5sr6WXw5UMZf1Vqdc44I7ManaN+API1vqectlmy80jiWnN7xdw==
+# DxcNMjAwNjMwMTkyMTM0WjAjBgkqhkiG9w0BCQQxFgQUmg0lEnzE+F9oaWrH5sHz
+# OUMfj28wDQYJKoZIhvcNAQEBBQAEggEAHWUgr3CaZ5hBgGDcbhA2eHioqFOBtQKw
+# 7B8tiDGq3H+/S9NkHXuGcxmrCc1bNL4gy/7FZEn21Nu+9hS8b5Cp61JhBZk+BLci
+# Y7F1uK5ubQsIcU69075kqsPEV4cIp2A20+7fhOufzBcMDczMR2jhELBWvG7PZyY4
+# dX5wU2hknyeTYa3tEi0S073bvlUpp0flEC68sPbUzO/6Yg5yLBajsCUZSTj3OSf4
+# qAsezEm1QKcxgu/w3io+tszGNE4Ey/UbeIkNwf9ZCkDfydaEjFyAG7JFMIyVz6A5
+# xXNoHCIb+ir5cKIumXg4MjSp08fNnpRSPdskOMfSmnk6LiejMekmWw==
 # SIG # End signature block
