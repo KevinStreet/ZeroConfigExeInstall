@@ -73,23 +73,29 @@ if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
     ## Check for Exe installer and modify the installer path accordingly.
     ## If multiple .exe files are found attempt to find setup.exe or install.exe and use those. If neither exist the user must specify the installer executable in the $installerExecutable variable in Deploy-Application.ps1.
     if ([string]::IsNullOrEmpty($installerExecutable)) {
-        [array]$exesInPath = (Get-ChildItem -Path "$dirFiles\*.exe").Name
-        if ($exesInPath.Count -gt 1) {
-            if ($exesInPath -contains "setup.exe") {
-                [string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -eq 'setup.exe') } | Select-Object -ExpandProperty 'FullName'
-            }
+    	## check if $dirfiles exists
+        if(Test-Path -LiteralPath "$dirfiles" -PathType 'Leaf') {
+		[array]$exesInPath = (Get-ChildItem -Path "$dirFiles\*.exe").Name
+		if ($exesInPath.Count -gt 1) {
+		    if ($exesInPath -contains "setup.exe") {
+			[string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -eq 'setup.exe') } | Select-Object -ExpandProperty 'FullName'
+		    }
 
-            elseif ($exesInPath -contains "install.exe") {
-                [string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -eq 'install.exe') } | Select-Object -ExpandProperty 'FullName'
-            }
+		    elseif ($exesInPath -contains "install.exe") {
+			[string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetFileName($_.Name) -eq 'install.exe') } | Select-Object -ExpandProperty 'FullName'
+		    }
 
-            else {
-                Write-Log -Message "Multiple .exe files found but not sure which to use as the installer. The installer .exe must be specified in the $installerExecutable variable in Deploy-Application.ps1." -Source $appDeployToolkitExtName
-            }
-        }
+		    else {
+			Write-Log -Message "Multiple .exe files found but not sure which to use as the installer. The installer .exe must be specified in the $installerExecutable variable in Deploy-Application.ps1." -Source $appDeployToolkitExtName
+		    }
+		}
 
-        else {
-            [string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetExtension($_.Name) -eq '.exe') } | Select-Object -ExpandProperty 'FullName' -First 1
+		else {
+		    [string]$defaultExeFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetExtension($_.Name) -eq '.exe') } | Select-Object -ExpandProperty 'FullName' -First 1
+		}
+	}
+	else {
+            Write-Log -Message "Files folder: '$dirfiles' do not exist!" -Source $appDeployToolkitExtName
         }
     }
 
@@ -115,14 +121,20 @@ if ([string]::IsNullOrEmpty($TestSupportedInstallerTypePath)) {
     ## If multiple .msu files are found inform the user they must specify which one they want in $installerExecutable in Deploy-Application.ps1.
     if ([string]::IsNullOrEmpty($defaultExeFile)) {
         if ([string]::IsNullOrEmpty($installerExecutable)) {
-            [array]$msusInPath = (Get-ChildItem -Path "$dirFiles\*.msu").Name
-            if ($msusInPath -gt 1) {
-                Write-Log -Message "Multiple .msu files found but not sure which one to use. Please reduce to one .msu or specify which .msu to use in the $installerExecutable variable in Deploy-Application.ps1." -Source $appDeployToolkitExtName
-            }
+	    ## check if $dirfiles exists
+	    if(Test-Path -LiteralPath "$dirfiles" -PathType 'Leaf') {
+		[array]$msusInPath = (Get-ChildItem -Path "$dirFiles\*.msu").Name
+		if ($msusInPath -gt 1) {
+			Write-Log -Message "Multiple .msu files found but not sure which one to use. Please reduce to one .msu or specify which .msu to use in the $installerExecutable variable in Deploy-Application.ps1." -Source $appDeployToolkitExtName
+		}
 
-            else {
-                [string]$defaultMsuFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetExtension($_.Name) -eq '.msu') } | Select-Object -ExpandProperty 'FullName' -First 1
-            }
+		else {
+			[string]$defaultMsuFile = Get-ChildItem -LiteralPath $dirFiles -ErrorAction 'SilentlyContinue' | Where-Object { (-not $_.PsIsContainer) -and ([IO.Path]::GetExtension($_.Name) -eq '.msu') } | Select-Object -ExpandProperty 'FullName' -First 1
+		}
+	    }
+	    else {
+		Write-Log -Message "Files folder: '$dirfiles' do not exist!" -Source $appDeployToolkitExtName
+	    }
         }
 
         else {
